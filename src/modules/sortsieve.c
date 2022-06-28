@@ -1,8 +1,6 @@
 /* 
+
  Copyright (C) 1999-2004 Aaron Stone aaron at serendipity dot cx
- Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
- Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
- Copyright (c) 2020-2022 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -526,19 +524,19 @@ int sort_getscript(sieve2_context_t *s, void *my)
 int sort_getheader(sieve2_context_t *s, void *my)
 {
 	struct sort_context *m = (struct sort_context *)my;
-	const char *header;
+	char *header;
 	char **bodylist;
 	GList *headers;
 	unsigned i;
 
-	header = sieve2_getvalue_string(s, "header");
+	header = (char *)sieve2_getvalue_string(s, "header");
 	
 	headers = dbmail_message_get_header_repeated(m->message, header);
 	
 	bodylist = g_new0(char *,g_list_length(headers)+1);
 	i = 0;
 	while (headers) {
-		char *decoded = dbmail_iconv_decode_text(headers->data);
+		char *decoded = dbmail_iconv_decode_text((char *)headers->data);
 		bodylist[i++] = decoded;
 		/* queue the decoded value for freeing later on */
 		m->freelist = g_list_prepend(m->freelist, decoded);
@@ -550,9 +548,7 @@ int sort_getheader(sieve2_context_t *s, void *my)
 	g_list_free(g_list_first(headers));
 
 	/* We have to free the header array. */
-	if (m->freelist) {
-		m->freelist = g_list_prepend(m->freelist, bodylist);
-	}
+	m->freelist = g_list_prepend(m->freelist, bodylist);
 
 	for (i = 0; bodylist[i] != NULL; i++) {
 		TRACE(TRACE_INFO, "Getting header [%s] returning value [%s]",
@@ -710,12 +706,21 @@ static int sort_teardown(sieve2_context_t **s2c,
 	assert(s2c != NULL);
 	assert(sc != NULL);
 
+	sieve2_context_t *sieve2_context = *s2c;
 	struct sort_context *sort_context = *sc;
+	int res;
 
 	g_list_destroy(sort_context->freelist);
 
 	if (sort_context) {
 		g_free(sort_context);
+	}
+
+	res = sieve2_free(&sieve2_context);
+	if (res != SIEVE2_OK) {
+		TRACE(TRACE_ERR, "Error [%d] when calling sieve2_free: [%s]",
+			res, sieve2_errstr(res));
+		return DM_EGENERAL;
 	}
 
 	*s2c = NULL;

@@ -1,7 +1,6 @@
 /*
- Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
- Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
- Copyright (c) 2020-2022 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
+  
+ Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -209,10 +208,9 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 		}
 		/* add Seen as flag when IMAP_FLAGS_SEEN=1 */
 		if (result->flags[IMAP_FLAG_SEEN]==1){
-			gchar *value = g_strdup("\\Seen");
-			result->keywords = g_list_append(result->keywords, value);
-			g_free(value);
+			result->keywords = g_list_append(result->keywords, g_strdup("\\Seen"));	
 			/* some strange clients like it this way */
+			//result->keywords = g_list_append(result->keywords, g_strdup("\\SEEN"));	
 		}
 		/* cleaning up */
 		if (idsAdded==1){
@@ -265,10 +263,15 @@ static T state_load_messages(T M, Connection_T c, gboolean coldLoad)
 				result = g_tree_lookup(msginfo, &id);
 				tempId=id;
 			}
-		    if (result && keyword){
-				gchar *keyword2 = g_strdup(keyword);
-				result->keywords = g_list_append(result->keywords, keyword2);
-				g_free(keyword2);
+		    if ( result != NULL ){
+				result->keywords = g_list_append(result->keywords, g_strdup(keyword));
+				/*
+				GList *kL = g_tree_keys(M->keywords);
+				GString *kStr = g_list_join(kL," ");
+				TRACE(TRACE_INFO, "MSG Keyworkds [%s]",kStr->str);
+				g_string_free(kStr,TRUE);
+				g_list_free(g_list_first(kL));
+				*/
 			}
 		}
 	}
@@ -417,7 +420,7 @@ T MailboxState_update(Mempool_T pool, T OldM)
 		TRACE(TRACE_ERR, "SEQ Error opening mailbox");
 		MailboxState_free(&M);
 	}
-
+	    
 	return M;
 }
 
@@ -432,7 +435,7 @@ void MailboxState_remap(T M)
 	ids = g_tree_keys(M->msginfo);
 	ids = g_list_first(ids);
 	while (ids) {
-		uid = ids->data;
+		uid = (uint64_t *)ids->data;
 
 		msginfo = g_tree_lookup(M->msginfo, uid);
 		if (msginfo->status < MESSAGE_STATUS_DELETE) {
@@ -471,7 +474,7 @@ void MailboxState_addMsginfo(T M, uint64_t uid, MessageInfo *msginfo)
 {
 	uint64_t *id = g_new0(uint64_t,1);
 	*id = uid;
-	g_tree_insert(M->msginfo, id, msginfo);
+	g_tree_insert(M->msginfo, id, msginfo); 
 	if (msginfo->flags[IMAP_FLAG_RECENT] == 1) {
 		M->seq--; // force resync
 		M->recent++;
