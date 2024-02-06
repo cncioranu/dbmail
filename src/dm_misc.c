@@ -437,11 +437,8 @@ GList * g_string_split(GString * string, const gchar * sep)
 	while(array[i])
 		list = g_list_append(list,array[i++]);
 
-	// array should be freed with g_strfreev()
-	// but as the strings are appended to list
-	// it's list that should free the elements
-	g_free(array);
-
+	//cleaning
+	g_strfreev(array);
 	return list;
 }
 char * g_strcasestr(const char *haystack, const char *needle)
