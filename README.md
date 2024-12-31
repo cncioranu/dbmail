@@ -13,6 +13,7 @@
 
 DBMail is a collection of programs that enables email to be managed, stored in
 and retrieved from a database.
+
 **Note:** This repository contains some features that are not present in the official DBMail
 
 ## Why is it useful?
