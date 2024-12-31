@@ -1,5 +1,6 @@
 # DBMail
-
+> Copyright (c) 2023-2024 Cosmin Cioranu, support@nbeta.ro
+> 
 > Copyright (c) 2020-2024 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 >
 > Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
@@ -12,6 +13,7 @@
 
 DBMail is a collection of programs that enables email to be managed, stored in
 and retrieved from a database.
+**Note:** This repository contains some features that are not present in the official DBMail
 
 ## Why is it useful?
 
