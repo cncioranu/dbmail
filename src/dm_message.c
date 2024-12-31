@@ -657,7 +657,6 @@ static gboolean store_mime_message(GMimeObject * object, DbmailMessage *m, gbool
 	
 }
 
-
 gboolean store_mime_object(GMimeObject *parent, GMimeObject *object, DbmailMessage *m)
 {
 	GMimeContentType *content_type;
@@ -681,10 +680,10 @@ gboolean store_mime_object(GMimeObject *parent, GMimeObject *object, DbmailMessa
 		mime_part = g_mime_message_get_mime_part((GMimeMessage *)object);
 	} else
 		mime_part = object;
+
 	content_type = g_mime_object_get_content_type(mime_part);
 
 	_analyze_mime(mime_part,m);
-
 	if (g_mime_content_type_is_type(content_type, "multipart", "*")) {
 		r = store_mime_multipart((GMimeObject *)mime_part, m, content_type, skiphead);
 
