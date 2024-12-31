@@ -114,7 +114,31 @@ gchar * g_mime_object_get_body(const GMimeObject *object)
 
 	return s;
 }
+static void _analyze_mime(GMimeObject *mime_part, DbmailMessage *m)
+{
+	GMimeContentType *content_type;
 
+	content_type = g_mime_object_get_content_type(mime_part);
+	TRACE(TRACE_DEBUG, "StoreObject Analysis:  content type %s",g_mime_content_type_get_media_type(content_type));
+	TRACE(TRACE_DEBUG, "StoreObject Analysis:  content sub type %s",g_mime_content_type_get_media_subtype(content_type));
+
+	if (g_mime_content_type_is_type(content_type, "text", "html")) {
+		const gchar *param = g_mime_content_type_get_parameter(content_type, "report-type");
+		TRACE(TRACE_DEBUG, "StoreObject Analysis:  param %s",param);
+		if (strcmp(param, "delivery-status")==0){
+			TRACE(TRACE_DEBUG, "StoreObject Analysis:  is delivery report text/html report-type=delivery-status");
+			m->message_type = 1;
+		}
+	}
+	if (g_mime_content_type_is_type(content_type, "message", "delivery-status")) {
+		TRACE(TRACE_DEBUG, "StoreObject Analysis: delivery report message/delivery-status");
+		m->message_type = 1;
+	}
+	if (g_mime_content_type_is_type(content_type, "multipart", "report")) {
+		TRACE(TRACE_DEBUG, "StoreObject Analysis:  is delivery report multipart/report");
+		m->message_type = 1;
+	}
+}
 static uint64_t blob_exists(const char *buf, const char *hash)
 {
 	volatile uint64_t id = 0;
@@ -561,9 +585,13 @@ static int store_body(GMimeObject *object, DbmailMessage *m)
 	return r;
 }
 
+
 static gboolean store_mime_text(GMimeObject *object, DbmailMessage *m, gboolean skiphead)
 {
 	g_return_val_if_fail(GMIME_IS_OBJECT(object), TRUE);
+
+	_analyze_mime(object,m);
+
 	if (! skiphead && store_head(object, m) < 0) return TRUE;
 	if(store_body(object, m) < 0) return TRUE;
 	return FALSE;
@@ -655,6 +683,7 @@ gboolean store_mime_object(GMimeObject *parent, GMimeObject *object, DbmailMessa
 
 	content_type = g_mime_object_get_content_type(mime_part);
 
+	_analyze_mime(mime_part,m);
 	if (g_mime_content_type_is_type(content_type, "multipart", "*")) {
 		r = store_mime_multipart((GMimeObject *)mime_part, m, content_type, skiphead);
 
@@ -736,6 +765,9 @@ DbmailMessage * dbmail_message_new(Mempool_T pool)
 	
 	/* set the charset */
 	self->charset = "utf-8";
+
+	/* set type of message 0=normal message, 1=delivery report/status*/
+	self->message_type = 0;
 
 	dbmail_message_set_class(self, DBMAIL_MESSAGE);
 	
@@ -1226,6 +1258,13 @@ static int _update_message(DbmailMessage *self)
 	return DM_SUCCESS;
 }
 
+static int _update_message_type(DbmailMessage *self)
+{
+	if (! db_update("UPDATE %sphysmessage SET messagetype = %" PRIu64 " WHERE id = %" PRIu64 "",
+				DBPFX, self->message_type, self->id))
+			return DM_EQUERY;
+	return DM_SUCCESS;
+}
 
 int dbmail_message_store(DbmailMessage *self)
 {
@@ -1268,8 +1307,17 @@ int dbmail_message_store(DbmailMessage *self)
 			}
 			step++;
 		}
-
+		//other meta informations which are computed in dm_message_store
 		if (step == 3) {
+			/* update message type */
+			if ((res = _update_message_type(self) < 0)) {
+				usleep(delay*i);
+				continue;
+			}
+			step++;
+		}
+
+		if (step == 4) {
 			/* store message headers */
 			if ((res = dbmail_message_cache_headers(self)) < 0) {
 				usleep(delay*i);
@@ -2906,7 +2954,12 @@ int send_forward_list(DbmailMessage *message, GList *targets, const char *from)
 	targets = g_list_first(targets);
 	TRACE(TRACE_INFO, "delivering to [%u] external addresses", g_list_length(targets));
 	while (targets) {
-		char *to = (char *)targets->data;
+
+		//char *to = (char *)targets->data;
+		DeliveryItem_T *pair = (DeliveryItem_T *)targets->data;
+		char *from_local=g_strdup(pair->from);
+		char *to=g_strdup(pair->to);
+
 
 		if (!to || strlen(to) < 1) {
 			TRACE(TRACE_ERR, "forwarding address is zero length, message not forwarded.");
@@ -2934,8 +2987,25 @@ int send_forward_list(DbmailMessage *message, GList *targets, const char *from)
 				// The forward is a command to execute.
 				result |= send_mail(message, "", "", NULL, SENDRAW, to+1);
 			} else {
-				// The forward is an email address.
-				result |= send_mail(message, to, from, NULL, SENDRAW, SENDMAIL);
+				if (message->message_type == 0){
+					//this is a normal message(not a bounce), evaluate the need to change from source
+					if (dm_check_forward_override(from_local,to)>0){
+						if (from_local){
+							TRACE(TRACE_ERR, "forwarding normal message by changing %s to %s", from, from_local);
+							result |= send_mail(message, to, from_local, NULL, SENDRAW, SENDMAIL);
+						}else{
+							TRACE(TRACE_ERR, "forwarding normal message to default from %s due to null from", from);
+							result |= send_mail(message, to, from_local, NULL, SENDRAW, SENDMAIL);
+						}
+					}else{
+						TRACE(TRACE_ERR, "forwarding normal message to %s, not changing to %s", from, from_local);
+						result |= send_mail(message, to, from, NULL, SENDRAW, SENDMAIL);
+					}
+				}else{
+					// The forward is an email address.
+					TRACE(TRACE_ERR, "forwarding bounce message to %s,  not changing to %s", from, from_local);
+					result |= send_mail(message, to, from, NULL, SENDRAW, SENDMAIL);
+				}
 			}
 		}
 		if (! g_list_next(targets))
@@ -3096,7 +3166,7 @@ int insert_messages(DbmailMessage *message, List_T dsnusers)
 		/* Each user may also have a list of external forwarding addresses. */
 		if (g_list_length(delivery->forwards) > 0) {
 			TRACE(TRACE_DEBUG, "delivering to external addresses");
-			const char *from = dbmail_message_get_header(message, "Return-Path");
+			const char *from = g_strdup(dbmail_message_get_header(message, "Return-Path"));
 			/* Forward using the temporary stored message. */
 			if (send_forward_list(message, delivery->forwards, from)) {
 				/* If forward fails, tell the sender that we're
