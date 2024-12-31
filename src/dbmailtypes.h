@@ -163,7 +163,8 @@ typedef struct {
 	int part_key;
 	int part_depth;
 	int part_order;
-	//if the message is of types or contains in it's body the following
+	
+	//flag: nessages that contain certain types of parts
 	//- message/delivery-status
 	//- multipart/report
 	//0 = normal, 1 = delivery report
