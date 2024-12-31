@@ -1,5 +1,8 @@
 # Changelog
 All notable changes to this project will be documented in this file.
+## [3.5.1] - 2024-12-31
+- Sender Rewriting Scheme, handling of bouncing emails
+- fix #333
 
 ## [3.5.0] - 2024-10-22
 - cURL library added for SMTP
