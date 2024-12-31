@@ -60,12 +60,12 @@ int auth_user_exists(const char *username, uint64_t * user_idnr)
 GList * auth_get_known_users(void)
 {
 	GList * users = NULL;
-	C c; R r; 
+	C c; R r;
 
 	c = db_con_get();
 	TRY
 		r = db_query(c, "SELECT userid FROM %susers ORDER BY userid",DBPFX);
-		while (db_result_next(r)) 
+		while (db_result_next(r))
 			users = g_list_append(users, g_strdup(db_result_get(r, 0)));
 	CATCH(SQLException)
 		LOG_SQLERROR;
