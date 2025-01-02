@@ -28,6 +28,42 @@ ALTER TABLE `dbmail_users` CONVERT TO CHARACTER SET utf8mb4;
 ALTER TABLE `dbmail_physmessage` ADD COLUMN `messagetype` BIGINT(20) UNSIGNED NOT NULL DEFAULT '0';
 ALTER TABLE `dbmail_aliases` ADD COLUMN `override_fw_sender` int UNSIGNED NOT NULL DEFAULT '0';
 
+
+ALTER TABLE `dbmail_acl` ADD COLUMN `acl_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT FIRST, DROP PRIMARY KEY, ADD UNIQUE INDEX `unq_acl`(`user_id`, `mailbox_id`) USING BTREE, ADD PRIMARY KEY (`acl_id`);
+ALTER TABLE `dbmail_acl` CHANGE COLUMN `user_id` `user_id` BIGINT(20) UNSIGNED NULL DEFAULT NULL, CHANGE COLUMN `mailbox_id` `mailbox_id` BIGINT(20) UNSIGNED NULL DEFAULT NULL;
+ALTER TABLE `dbmail_auto_notifications`	ADD COLUMN `auto_notification_id` BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT FIRST,	CHANGE COLUMN `user_idnr` `user_idnr` BIGINT(20) UNSIGNED NULL DEFAULT NULL AFTER`auto_notification_id`, ADD PRIMARY KEY (`auto_notification_id`);
+ALTER TABLE `dbmail_auto_replies` ADD COLUMN `auto_reply_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT FIRST, ADD PRIMARY KEY (`auto_reply_id`);
+
+ALTER TABLE `dbmail_auto_replies` CHANGE COLUMN `start_date` `start_date` DATETIME NULL DEFAULT NULL AFTER `user_idnr`,	CHANGE COLUMN `stop_date` `stop_date` DATETIME NULL DEFAULT NULL AFTER `start_date`;
+ALTER TABLE `dbmail_auto_replies` CHANGE COLUMN `user_idnr` `user_idnr` BIGINT(20) UNSIGNED NULL DEFAULT NULL AFTER `auto_reply_id`;
+
+ALTER TABLE `dbmail_envelope` CHANGE COLUMN `physmessage_id` `physmessage_id` BIGINT(20) UNSIGNED NULL DEFAULT NULL AFTER `id`,	CHANGE COLUMN `envelope` `envelope` MEDIUMTEXT NULL DEFAULT NULL  AFTER `physmessage_id`;
+ALTER TABLE `dbmail_filters` CHANGE COLUMN `user_id` `user_id` BIGINT(20) UNSIGNED NULL DEFAULT NULL AFTER `id`, CHANGE COLUMN `headername` `headername` VARCHAR(255) NULL DEFAULT NULL  AFTER `user_id`, CHANGE COLUMN `headervalue` `headervalue` VARCHAR(255) NULL DEFAULT NULL  AFTER `headername`,	CHANGE COLUMN `mailbox` `mailbox` VARCHAR(255) NULL DEFAULT NULL  AFTER `headervalue`;
+ALTER TABLE `dbmail_header`	ADD COLUMN `header_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT FIRST, CHANGE COLUMN `physmessage_id` `physmessage_id` BIGINT(20) UNSIGNED NULL DEFAULT NULL AFTER `header_id`,CHANGE COLUMN `headername_id` `headername_id` BIGINT(20) UNSIGNED NULL DEFAULT NULL AFTER `physmessage_id`,	CHANGE COLUMN `headervalue_id` `headervalue_id` BIGINT(20) UNSIGNED NULL DEFAULT NULL AFTER `headername_id`,DROP PRIMARY KEY, ADD UNIQUE INDEX `unq_header` (`physmessage_id`, `headername_id`, `headervalue_id`) USING BTREE,	ADD PRIMARY KEY (`header_id`);
+ALTER TABLE `dbmail_headervalue` CHANGE COLUMN `hash` `hash` VARBINARY(64) NULL DEFAULT NULL;
+ALTER TABLE `dbmail_headervalue` CHANGE COLUMN `headervalue` `headervalue` MEDIUMTEXT NULL DEFAULT NULL ;
+ALTER TABLE `dbmail_keywords` ADD COLUMN `keyword_id` BIGINT NOT NULL AUTO_INCREMENT FIRST,	CHANGE COLUMN `message_idnr` `message_idnr` BIGINT(20) UNSIGNED NULL DEFAULT NULL AFTER `keyword_id`, CHANGE COLUMN `keyword` `keyword` VARCHAR(255) NULL DEFAULT NULL  AFTER `message_idnr`,	DROP PRIMARY KEY,	ADD UNIQUE INDEX `unq_keywords` (`message_idnr`, `keyword`) USING BTREE,	ADD PRIMARY KEY (`keyword_id`);
+ALTER TABLE `dbmail_mailboxes`	CHANGE COLUMN `owner_idnr` `owner_idnr` BIGINT(20) UNSIGNED NULL DEFAULT NULL AFTER `mailbox_idnr`;
+ALTER TABLE `dbmail_messages` CHANGE COLUMN `mailbox_idnr` `mailbox_idnr` BIGINT(20) UNSIGNED NULL DEFAULT NULL AFTER `message_idnr`, CHANGE COLUMN `physmessage_id` `physmessage_id` BIGINT(20) UNSIGNED NULL DEFAULT NULL AFTER `mailbox_idnr`;
+ALTER TABLE `dbmail_mimeparts` CHANGE COLUMN `hash` `hash` VARBINARY(64) NULL DEFAULT NULL AFTER `id`,	CHANGE COLUMN `data` `data` LONGBLOB NULL DEFAULT NULL AFTER `hash`, DROP INDEX `hash`,	ADD INDEX `mimepart_hash` (`hash`) USING BTREE;
+
+ALTER TABLE `dbmail_partlists`	ADD COLUMN `id` BIGINT NOT NULL AUTO_INCREMENT FIRST,ADD PRIMARY KEY (`id`);
+ALTER TABLE `dbmail_partlists`	CHANGE COLUMN `physmessage_id` `physmessage_id` BIGINT(20) UNSIGNED NULL DEFAULT NULL;
+ALTER TABLE `dbmail_partlists`	CHANGE COLUMN `part_id` `part_id` BIGINT(20) UNSIGNED NULL DEFAULT NULL;
+ALTER TABLE `dbmail_pbsp` CHANGE COLUMN `ipnumber` `ipnumber` VARCHAR(40) NULL DEFAULT NULL  AFTER `since`;
+
+ALTER TABLE `dbmail_referencesfield` CHANGE COLUMN `physmessage_id` `physmessage_id` BIGINT(20) UNSIGNED NULL DEFAULT NULL;
+ALTER TABLE `dbmail_replycache`	ADD COLUMN `replycache_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT FIRST,	ADD PRIMARY KEY (`replycache_id`);
+
+ALTER TABLE `dbmail_sievescripts` CHANGE COLUMN `name` `name` VARCHAR(255) NULL DEFAULT NULL  AFTER `owner_idnr`;
+ALTER TABLE `dbmail_subscription` ADD COLUMN `subscription_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT FIRST, CHANGE COLUMN `user_id` `user_id` BIGINT(20) UNSIGNED NULL DEFAULT NULL AFTER `subscription_id`, CHANGE COLUMN `mailbox_id` `mailbox_id` BIGINT(20) UNSIGNED NULL DEFAULT NULL AFTER `user_id`,	DROP PRIMARY KEY,	ADD UNIQUE INDEX `unq_subscription` (`user_id`, `mailbox_id`) USING BTREE,	ADD PRIMARY KEY (`subscription_id`);
+
+ALTER TABLE `dbmail_upgrade_steps`	ADD COLUMN `update_step_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT FIRST,	CHANGE COLUMN `from_version` `from_version` INT(11) NULL DEFAULT NULL AFTER `update_step_id`,	CHANGE COLUMN `to_version` `to_version` INT(11) NULL DEFAULT NULL AFTER `from_version`,	CHANGE COLUMN `applied` `applied` DATETIME NULL DEFAULT NULL AFTER `to_version`,	ADD PRIMARY KEY (`update_step_id`);
+
+ALTER TABLE `dbmail_usermap` ADD COLUMN `usermap_id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT FIRST,	CHANGE COLUMN `login` `login` VARCHAR(255) NULL DEFAULT NULL  AFTER `usermap_id`,	CHANGE COLUMN `sock_allow` `sock_allow` VARCHAR(255) NULL DEFAULT NULL  AFTER `login`,	CHANGE COLUMN `sock_deny` `sock_deny` VARCHAR(255) NULL DEFAULT NULL  AFTER `sock_allow`,	CHANGE COLUMN `userid` `userid` VARCHAR(255) NULL DEFAULT NULL  AFTER `sock_deny`,	ADD PRIMARY KEY (`usermap_id`);
+
+ALTER TABLE `dbmail_users`	CHANGE COLUMN `client_idnr` `client_idnr` BIGINT(20) UNSIGNED NULL DEFAULT NULL AFTER `passwd`,	DROP INDEX `userid_index`; 
+
 INSERT INTO dbmail_upgrade_steps (from_version, to_version, applied) values (32006, 35001, now());
 
 COMMIT;
