@@ -125,7 +125,7 @@ static void _analyze_mime(GMimeObject *mime_part, DbmailMessage *m)
 	if (g_mime_content_type_is_type(content_type, "text", "html")) {
 		const gchar *param = g_mime_content_type_get_parameter(content_type, "report-type");
 		TRACE(TRACE_DEBUG, "StoreObject Analysis:  param %s",param);
-		if (strcmp(param, "delivery-status")==0){
+		if (param && strcmp("delivery-status",param)==0){
 			TRACE(TRACE_DEBUG, "StoreObject Analysis:  is delivery report text/html report-type=delivery-status");
 			m->message_type = 1;
 		}
