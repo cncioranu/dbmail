@@ -3526,9 +3526,10 @@ int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_ty
 	size_t i, pos = 0;
 	volatile int seen = 0, count = 0;
 	INIT_QUERY;
-
-	if (! msginfo)
+	// unfortunate test. there are situation when msginfo is null
+	/*if (! msginfo)
 		return count;
+	*/
 
 	memset(query,0,DEF_QUERYSIZE);
 	pos += snprintf(query, DEF_QUERYSIZE-1, "UPDATE %smessages SET ", DBPFX);
